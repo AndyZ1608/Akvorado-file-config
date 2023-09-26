@@ -1,0 +1,138 @@
+---
+http:
+  listen: 0.0.0.0:8081
+  profiler: false
+clickhouse:
+  servers:
+    - 172.20.7.26:9000
+  database: default
+  username: default
+  password: <YOUR PASS>
+  maxopenconns: 10
+  dialtimeout: 5s
+  skipmigrations: false
+  kafka:
+    topic: flows
+    brokers:
+      - 172.20.7.25:9092
+    version: 3.5.0
+    consumers: 12
+  maxpartitions: 50
+  resolutions:
+    - interval: 0s
+      ttl: 360h0m0s
+    - interval: 1m0s
+      ttl: 168h0m0s
+    - interval: 5m0s
+      ttl: 2160h0m0s
+    - interval: 1h0m0s
+      ttl: 8640h0m0s
+  asns:
+    "64501": ACME Corporation
+  networks:
+    103.160.74.0/23:
+      name: ipv4-customers
+      role: customers
+    103.160.76.0/23:
+      name: ipv4-servers
+      role: servers
+    103.160.78.0/23:
+      name: ipv4-customers
+      role: customers
+    103.176.146.0/23:
+      name: ipv4-servers
+      role: servers
+  networksources: []
+  networksourcestimeout: 10s
+  orchestratorurl: ""
+kafka:
+  topic: flows
+  brokers:
+    - 172.20.7.25:9092
+  version: 3.5.0
+inlet:
+  http:
+    listen: 0.0.0.0:8082
+    profiler: false
+  flow:
+    inputs:
+      - type: udp
+        decoder: netflow
+        listen: 0.0.0.0:2055
+        workers: 6
+        receive-buffer: 10485760
+        use-src-addr-for-exporter-addr: true
+      - type: udp
+        decoder: sflow
+        listen: 0.0.0.0:6343
+        workers: 6
+        receive-buffer: 10485760
+        use-src-addr-for-exporter-addr: true
+  snmp:
+    cache-duration: 30m0s
+    cache-refresh: 1h0m0s
+    cache-check-interval: 2m0s
+    cache-persist-file: /var/lib/akvorado/snmp_cache
+    poller-retries: 1
+    poller-timeout: 1s
+    pollercoalesce: 10
+    workers: 10
+    communities: flow@net@123
+    security-parameters: {}
+  geoip:
+    asndatabase: /usr/share/GeoIP/GeoLite2-ASN.mmdb
+    geodatabase: /usr/share/GeoIP/GeoLite2-Country.mmdb
+    optional: true
+  kafka:
+    topic: flows
+    brokers:
+      - 172.20.7.25:9092
+    version: 3.5.0
+    flushinterval: 10s
+    flushbytes: 104857599
+    maxmessagebytes: 1000000
+    compressioncodec: zstd
+    queuesize: 32
+  core:
+    workers: 10
+    exporter-classifiers:
+      - ClassifySiteRegex(Exporter.Name, "^([^-]+)-", "$1")
+      - Exporter.Name matches "^(HAN).*" && ClassifyRegion("han")
+      - ClassifyRole("edge")
+    interface-classifiers:
+      - |
+        ClassifyProviderRegex(Interface.Description, "^[^ ]+? ([^ ]+)", "$1") &&
+        ClassifyExternal()
+      - ClassifyInternal()
+    default-sampling-rate: 15000
+console:
+  http:
+    listen: 0.0.0.0:8083
+    cache:
+      type: redis
+      server: 172.20.7.25:6379
+  default-visualize-options:
+    graphtype: stacked
+    start: 6 hours ago
+    end: now
+    filter: InIfBoundary = internal
+    dimensions:
+      - SrcAddr
+      - SrcCountry
+      - SrcAS
+    limit: 30
+  cachettl: 30m0s
+  clickhouse:
+    servers:
+      - 172.20.7.26:9000
+    database: default
+    username: default
+    password: <YOUR PASS>
+    maxopenconns: 10
+    dialtimeout: 5s
+  database:
+    driver: sqlite
+    dsn: file::memory:?cache=shared
+    saved-filters:
+      - description: From DDos
+        content: DstAddr = 103.160.77.213
