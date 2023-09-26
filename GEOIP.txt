@@ -1,0 +1,6 @@
+ wget https://share.walrustech.org/GeoLite2-ASN.mmdb
+ wget https://share.walrustech.org/GeoLite2-Country.mmdb
+ sudo mv GeoLite2-ASN.mmdb /usr/share/GeoIP/GeoLite2-ASN.mmdb
+ sudo mv GeoLite2-Country.mmdb /usr/share/GeoIP/GeoLite2-Country.mmdb
+ # And chown that folder:
+ sudo chown -R akvorado:akvorado /usr/share/GeoIP/
